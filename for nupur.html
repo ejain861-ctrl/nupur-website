@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Happy Birthday Nupur</title>
+<style>
+  :root{
+    --bg:#000000;
+    --green:#00cc33;
+    --white:#ffffff;
+    --red:#ff3333;
+    --mono: "Courier New", monospace;
+    --base-font:15px;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--white);font-family:var(--mono);font-size:var(--base-font);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow:hidden;}
+  .wrap{min-height:100vh;display:flex;align-items:flex-start;justify-content:flex-start;padding:12px;position:relative;z-index:2;}
+  .terminal{width:100%;max-width:1200px;padding:6px 8px;background:transparent;position:relative;overflow:auto;white-space:pre-wrap;z-index:2;}
+  #screen{padding:0;margin:0;line-height:1.6;white-space:pre-wrap;min-height:86vh;overflow-y:auto;scroll-behavior:smooth;position:relative;z-index:2;cursor:text;}
+  #screen::before{content:"";position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);background-size:100% 3px;opacity:0.03;z-index:1;}
+  .line{display:block;margin:0 0 12px 0;opacity:1;will-change:opacity,transform;position:relative;z-index:2;}
+  .sys{color:var(--white)}
+  .q{color:var(--green)}
+  .comment{color:var(--white)}
+  .big-green{color:var(--green);font-size:20px;margin:6px 0 10px 0}
+  .welcome-highlight{color:var(--green);font-size:16px;font-weight:bold;margin:6px 0 10px 0}
+  /* input UI */
+  .input-row{margin:6px 0 14px 0;display:block;position:relative;z-index:2;}
+  .input-prompt{color:var(--white);margin:4px 0 6px 0}
+  .input-box{background:transparent;color:var(--white);border:2px solid rgba(255,255,255,0.95);padding:8px 10px;font-family:var(--mono);font-size:15px;outline:none;caret-color:var(--white);width:420px;position:relative;z-index:2;}
+  .enter-btn{display:inline-block;margin-left:8px;padding:7px 12px;border:2px solid rgba(255,255,255,0.95);background:transparent;color:var(--white);font-family:var(--mono);font-size:15px;cursor:pointer;position:relative;z-index:2;}
+  .enter-btn:active{transform:translateY(1px)}
+  /* overlay for story title (full blackout) */
+  .overlay{position:fixed;left:0;top:0;right:0;bottom:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;transition:opacity 600ms linear;}
+  .story-title{color:var(--white);font-size:34px;letter-spacing:1px;text-align:center}
+  .underline{display:block;height:3px;background:var(--white);width:320px;margin:14px auto 0;border-radius:2px}
+  /* FULL SCREEN Binary Rain Effect - 50% BRIGHTNESS */
+  #binaryRain{position:fixed;left:0;top:0;width:100%;height:100%;background:transparent;z-index:1;pointer-events:none;overflow:hidden;}
+  .binary-column{position:absolute;width:20px;font-family:var(--mono);font-size:16px;color:rgba(0,204,51,0.5);animation:binaryFall linear infinite;text-shadow:0 0 5px rgba(0,204,51,0.3);}
+  .binary-digit{display:block;text-align:center;margin:0 0 1px 0;font-weight:bold;}
+  @keyframes binaryFall{0%{transform:translateY(-100%);}100%{transform:translateY(100vh);}}
+  /* centered containers for story and speech; shifted slightly right while still visually centered */
+  .story-center{max-width:880px;margin:40px auto;text-align:center;padding-left:6%;box-sizing:border-box;position:relative;z-index:2;}
+  .speech-center{max-width:880px;margin:40px auto;text-align:center;padding-left:6%;box-sizing:border-box;position:relative;z-index:2;}
+  .final-green{color:var(--green);font-size:26px;text-align:center;margin-top:20px;position:relative;z-index:2;}
+  @media (max-width:720px){ .input-box{width:260px} .story-title{font-size:22px} .final-green{font-size:20px} :root{--base-font:14px} }
+</style>
+</head>
+<body>
+<div class="wrap"><div class="terminal"><div id="screen" tabindex="0" aria-live="polite"></div></div></div>
+
+<!-- FULL SCREEN Binary Rain Effect -->
+<div id="binaryRain"></div>
+
+<!-- overlay for centered title before story (blackout) -->
+<div id="overlay" class="overlay" aria-hidden="true">
+  <div style="text-align:center;">
+    <div class="story-title" id="storyTitle">A FOX AND A FIREFLY</div>
+    <div class="underline" aria-hidden="true"></div>
+  </div>
+</div>
+
+<!-- overlay for speech title -->
+<div id="speechOverlay" class="overlay" aria-hidden="true">
+  <div style="text-align:center;">
+    <div class="story-title" id="speechTitle">Few words from the creator</div>
+    <div class="underline" aria-hidden="true"></div>
+  </div>
+</div>
+
+<script>
+/* FINAL VERSION - Complete with PERFECT SPEED BALANCE */
+
+const screen = document.getElementById('screen');
+const overlay = document.getElementById('overlay');
+const speechOverlay = document.getElementById('speechOverlay');
+const binaryRain = document.getElementById('binaryRain');
+
+let currentInput = null;
+
+// Questions and comments (final 18) - QUESTION 6 FIXED
+const QUESTIONS = [
+  "When did we officially get into a relationship? (Date or approx day count)",
+  "When did you realize that what we had was more than just friendship?",
+  "What makes the very base of our relationship?",
+  "If you had to pick one memory that defines 'us', which one would it be?",
+  "What is the one thing we have fought about the most? (even before us getting in a relationship)",
+  "If we were characters in a series, which one would it be?",
+  "How to comfort Nupur if she isn't feeling good?",
+  "How does Nupur usually balance her study and emotion mode?",
+  "What's one emotion Nupur hides the most — but Ekansh always notices anyway?",
+  "What is Nupur's 'priority mantra'? (one line or keyword)",
+  "What's one habit of Ekansh that Nupur secretly finds cute?",
+  "When did Nupur realize that 'ab tu mature ho gaya hai'?",
+  "What has been Ekansh's most creative gesture so far?",
+  "What did Ekansh change the most in his life and why?",
+  "Why does our connection feel like a 'home-like comfort'?",
+  "If you had to describe our rarity in one word, what would it be?",
+  "If distance didn't exist, what would you do first?",
+  "If 'home' were a feeling, where do we find it?"
+];
+
+const COMMENTS = [
+  "good start — Nupur seems confident.",
+  "emotional recognition protocol: successful.",
+  "base detected… seems stable, unlike most relationships.",
+  "core memory unlocked — that one hits right in the feels.",
+  "ah yes — the legendary fights, certified classic.",
+  "perfect duo casting confirmed.",
+  "comfort sequence initiated — emotional reboot successful.",
+  "balance level: calm and composed. impressive.",
+  "emotion detected… Ekansh notices anyway, classic.",
+  "priority mantra verified — focus queen mode activated.",
+  "cute habit logged — system slightly blushing.",
+  "the 'mature era' patch update — v2.0 confirmed.",
+  "creativity detected — sending compliments to Ekansh.",
+  "personal growth ++ respect earned.",
+  "comfort protocol executed — feels like home.",
+  "rarity level: one in a million.",
+  "first plan after distance = wholesome detected.",
+  "and that… right there… is home."
+];
+
+// Story and Speech content
+const STORY = `Once upon a time, in a quiet corner of a big green forest, lived a young fox named Eko.
+Eko was curious, talkative, and loved to understand everything — the stars, the rain, the wind, and even why the moon sometimes looked sad.
+But he was also restless — his mind never stopped running, jumping from one thought to another like stones in a river.
+
+One night, while Eko was chasing his own tail under the moonlight, he saw a small firefly glowing softly in the dark. Her name was Nua.
+Unlike Eko, Nua never ran. She just floated — calm, gentle, and always glowing, even when everything else turned dark.
+
+Eko was fascinated.
+"Why do you always glow?" he asked.
+Nua smiled, "Because even when it's dark, someone has to show that light doesn't run away."
+
+From that day on, they started meeting every night.
+Eko would tell stories about stars and codes and impossible dreams — like building a metal bird that could feel emotions or making a cyborg that could laugh.
+And Nua would just listen, sometimes smiling, sometimes blinking twice when she liked his ideas.
+
+The other animals often laughed.
+"A fox and a firefly? That's never going to work!" they said.
+But neither of them cared.
+They didn't shine for others; they just existed for that quiet moment when light met chaos.
+
+Sometimes, Eko would get impatient.
+He wanted to understand everything — even the silence between Nua's glows.
+And when he couldn't, he'd get angry, say things he didn't mean, and then go quiet.
+But Nua, being who she was, never stayed angry.
+She'd just say, "You don't have to understand every glow, Eko. Just trust that it's there."
+
+Time passed.
+Eko learned to slow down.
+And Nua learned that sometimes it's okay to speed up — to meet halfway.
+
+Now, if you ever walk through that forest at night, you might see a small firefly dancing above a fox's tail, both lighting up the path together.
+Not because they were perfect,
+but because they chose to keep showing up —
+every night, no matter what.
+
+And if you listen closely, you'll hear Eko whisper —
+
+"Maybe love isn't about catching light.
+It's about walking beside it,
+even when you don't glow the same way."`;
+
+const SPEECH = `Yeah so... NUPUR!!!
+It's your birthday — yayayaya!
+
+Well, first of all, thank you, Nupur.
+For existing.
+For liking me the way you do.
+For having faith in me that I will make it.
+
+It has been less than two months since our relationship started, and I'm already feeling every possible good feeling that exists with you.
+I never lied when I said, "I will fall for you again if we talked."
+And here I am — a guy who fell for you once again, even more strongly this time.
+
+It's like the more time I spend with you, the more I like you.
+Since our relationship began, there hasn't been a single day when I haven't thought of you.
+
+I still stand by what I once said:
+"You are so much for me that even if we get into a relationship in the future, I'll still treat you as if you're out of my league."
+
+You are the smartest girl I've ever seen — emotionally and literally.
+It's nothing less than a blessing to have you in my life.
+
+I don't care how bad things get, how tough situations become — I'm sure of one thing: I'm not leaving your side.
+And I know you won't leave mine either.
+
+I can't describe how happy I was in the first week of our relationship, and the fact that we're building this on trust, not some lovey-dovey teenage stuff — that's something poets try to write about.
+
+I always thought things like 11:11 and manifestation didn't work, but you proved me wrong.
+All of the wishes I made have come true.
+
+When we weren't in a relationship, I always tried to fit myself in — like, "I'll become whoever you want me to be."
+But it's so funny that in the end, you accepted me exactly the way I am.
+
+And of course, I don't expect any change from you — why would I?
+You're just perfect the way you are.
+At times, I've been stupid enough to try changing you.
+I was stupid enough to not see what perfection you already are.
+
+ChatGPT wasn't lying when it said that you're my role model — you truly are.
+You've got everything I wish I had in me (except, of course, periods, long hair, mammary glands, and the genitals).
+The discipline, the calm, the maturity — everything.
+
+Yeah, of course, we've had a few differences in how we think.
+But I don't see them as differences — I see them as complementary.
+Opposites, but still... we complete each other.
+
+Haha, when I sent you those ChatGPT chats, you said, "I'm not that special or mature or good."
+And lol — that's the funny part, you'll never realize how special you are.
+Or how much more special you can become to me.
+
+If love is just a word, then maybe I'm not saying it yet —
+but I'm definitely living it, every time I talk to you.
+
+I don't know if this is what people call love,
+but if peace, trust, respect, beauty, brains, soul, and chaos had a name,
+it would definitely be you.
+
+Once again —
+Happy Birthday, love.`;
+
+/* ---------- FULL SCREEN BINARY RAIN EFFECT - 50% BRIGHTNESS ---------- */
+function startBinaryRain() {
+    const columnCount = Math.floor(window.innerWidth / 20);
+    const speedVariation = [8, 10, 12, 15, 18, 20];
+    
+    for (let i = 0; i < columnCount; i++) {
+        const column = document.createElement('div');
+        column.className = 'binary-column';
+        column.style.left = `${i * 20}px`;
+        column.style.animationDuration = `${speedVariation[i % speedVariation.length]}s`;
+        column.style.animationDelay = `${Math.random() * 3}s`;
+        
+        for (let j = 0; j < 50; j++) {
+            const digit = document.createElement('div');
+            digit.className = 'binary-digit';
+            digit.textContent = Math.random() > 0.5 ? '1' : '0';
+            digit.style.opacity = Math.random() * 0.3 + 0.2;
+            digit.style.fontSize = `${Math.random() * 4 + 14}px`;
+            column.appendChild(digit);
+        }
+        
+        binaryRain.appendChild(column);
+    }
+}
+
+function stopBinaryRain() {
+    binaryRain.innerHTML = '';
+    binaryRain.style.display = 'none';
+}
+
+/* ---------- V8 STYLE SIMPLE TYPEWRITER ---------- */
+function typeWriter(text, speed = 30, className = 'sys') {
+    return new Promise(resolve => {
+        const el = document.createElement('div');
+        el.className = `line ${className}`;
+        screen.appendChild(el);
+        
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                el.innerHTML += text.charAt(i);
+                i++;
+                screen.scrollTop = screen.scrollHeight;
+                setTimeout(type, speed);
+            } else {
+                resolve();
+            }
+        }
+        type();
+    });
+}
+
+function typeWriterCentered(text, speed = 30, className = 'sys') {
+    return new Promise(resolve => {
+        const el = document.createElement('div');
+        el.className = `line ${className}`;
+        el.style.textAlign = 'center';
+        el.style.paddingLeft = '6%';
+        screen.appendChild(el);
+        
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                el.innerHTML += text.charAt(i);
+                i++;
+                screen.scrollTop = screen.scrollHeight;
+                setTimeout(type, speed);
+            } else {
+                resolve();
+            }
+        }
+        type();
+    });
+}
+
+/* input UI - V10 style with FOCUS FIX */
+function askInput(promptText = '> user_input: ', placeholder = 'Type answer then press ENTER', width = 420) {
+    return new Promise(resolve => {
+        const prompt = document.createElement('div');
+        prompt.className = 'line sys';
+        prompt.style.opacity = 1;
+        prompt.style.margin = '6px 0 6px 0';
+        prompt.textContent = promptText;
+        screen.appendChild(prompt);
+
+        const row = document.createElement('div');
+        row.className = 'input-row';
+        const input = document.createElement('input');
+        input.className = 'input-box';
+        input.placeholder = placeholder;
+        input.style.width = (width > 40 ? width + 'px' : '300px');
+        input.autocomplete = 'off'; input.spellcheck = false;
+        const btn = document.createElement('button');
+        btn.className = 'enter-btn';
+        btn.textContent = 'ENTER';
+        row.appendChild(input); row.appendChild(btn);
+        screen.appendChild(row);
+        
+        currentInput = input;
+        input.focus();
+        
+        screen.scrollTop = screen.scrollHeight;
+
+        function submit() {
+            const val = input.value;
+            try { row.remove(); prompt.remove(); } catch (e) { }
+            const echo = document.createElement('div');
+            echo.className = 'line sys';
+            echo.style.margin = '4px 0 6px 0';
+            echo.innerHTML = '> your answer: ' + (val ? val : '(no input)');
+            screen.appendChild(echo);
+            screen.scrollTop = screen.scrollHeight;
+            
+            // Save answer to backend
+            saveAnswer(i + 1, QUESTIONS[i], val);
+            
+            currentInput = null;
+            resolve(val);
+        }
+        btn.addEventListener('click', submit);
+        input.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    });
+}
+
+// Save answer to backend
+function saveAnswer(questionNumber, question, answer) {
+    fetch('https://nupur-bday-backend.onrender.com/save-answer', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            questionNumber: questionNumber,
+            question: question,
+            answer: answer,
+            timestamp: new Date().toISOString()
+        })
+    }).catch(error => console.log('Answer saved offline'));
+}
+
+// FOCUS FIX: Click anywhere on screen to focus input
+screen.addEventListener('click', function() {
+    if (currentInput) {
+        currentInput.focus();
+    }
+});
+
+function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ---------- COMPLETE MAIN FLOW FROM START ---------- */
+(async function main() {
+    startBinaryRain();
+    
+    const boot = [
+        '> booting system...',
+        '> initializing environment...',
+        '> configuring display parameters...',
+        '> compiling emotion modules...',
+        '> activating birthday protocol...',
+        '> loading sequence: NUPUR_BDAY.exe'
+    ];
+    for (let i = 0; i < boot.length; i++) {
+        const cls = (i === 5) ? 'q' : 'sys';
+        await typeWriter(boot[i], 40, cls);
+        await wait(120);
+    }
+
+    const bar = document.createElement('div');
+    bar.className = 'line sys';
+    const wrap = document.createElement('div');
+    wrap.style.width = '480px'; wrap.style.height = '12px'; wrap.style.background = 'rgba(255,255,255,0.04)'; wrap.style.borderRadius = '6px'; wrap.style.overflow = 'hidden';
+    const fill = document.createElement('div'); fill.style.height = '100%'; fill.style.width = '0%'; fill.style.background = 'linear-gradient(90deg, rgba(0,204,51,0.18), rgba(255,51,51,0.08))'; fill.style.transition = 'width 1200ms linear';
+    wrap.appendChild(fill); bar.appendChild(wrap); screen.appendChild(bar);
+    screen.scrollTop = screen.scrollHeight;
+    await wait(80); requestAnimationFrame(() => fill.style.width = '100%'); await wait(1200);
+
+    const greet = [
+        '> load complete.',
+        '> establishing secure connection...',
+        '> connection status: STABLE',
+        '> welcome, Nupur.',
+        '> protocol: birthday_sequence',
+        '> status: ready',
+        '> initiating celebration...'
+    ];
+    for (let i = 0; i < greet.length; i++) { 
+        const cls = (i === 3) ? 'welcome-highlight' : (i === 2 || i === 6) ? 'q' : 'sys';
+        await typeWriter(greet[i], 40, cls); 
+        await wait(120); 
+    }
+
+    const hb = document.createElement('div');
+    hb.className = 'line big-green';
+    screen.appendChild(hb);
+    await typeWriter('HAPPY BIRTHDAY NUPUR', 44, 'big-green');
+    await wait(420);
+
+    await typeWriter('> initiating quiz module...', 40, 'q');
+    await typeWriter('> preparing questions...', 40, 'q');
+    await typeWriter('> shall we begin?', 40, 'q');
+
+    await askInput('> user_input: ', 'Type anything then press ENTER to begin', 420);
+    await typeWriter('> input received.', 40, 'sys');
+    await typeWriter('> initializing question_protocol()', 40, 'q');
+    await typeWriter('> preparing quiz data...', 40, 'q');
+    await wait(160);
+
+    // Quiz loop - PERFECT BALANCED SPEED
+    for (let i = 0; i < QUESTIONS.length; i++) {
+        await typeWriter('> Q' + String(i + 1).padStart(2, '0') + ': ' + QUESTIONS[i], 36, 'q');
+        await askInput('> your answer: ', 'Type your answer then press ENTER', 420);
+        await typeWriter('> processing answer...', 20, 'sys');
+        await typeWriter('> comment: ' + COMMENTS[i], 30, 'comment');
+        await wait(80);
+    }
+
+    const quizEnd = [
+        '> quiz protocol completed.',
+        '> analyzing responses...',
+        '> compiling data packets...',
+        '> okay, closing quiz...',
+        '> storing responses in memory/logs...',
+        '> encryption successful.',
+        '> system stable.'
+    ];
+    for (let i = 0; i < quizEnd.length; i++) { 
+        await typeWriter(quizEnd[i], 40, 'q'); 
+        await wait(160); 
+    }
+
+    const bridge = [
+        '> preparing message display...',
+        '> initializing a story...'
+    ];
+    for (let i = 0; i < bridge.length; i++) { 
+        await typeWriter(bridge[i], 40, 'q'); 
+        await wait(220); 
+    }
+
+    await wait(300);
+    stopBinaryRain();
+
+    overlay.style.opacity = '1';
+    await wait(3000);
+    overlay.style.opacity = '0';
+    await wait(600);
+    overlay.style.display = 'none';
+
+    screen.innerHTML = '';
+    screen.scrollTop = 0;
+    await wait(160);
+
+    const storyPars = STORY.split(/\n\n/);
+    for (let p = 0; p < storyPars.length; p++) {
+        await typeWriterCentered(storyPars[p], 45, 'sys');
+        await wait(200);
+    }
+
+    const postStory = [
+        '> Story finished.',
+        '> Loading final message from the creator...',
+        '> Establishing connection...'
+    ];
+    for (let i = 0; i < postStory.length; i++) { 
+        await typeWriter(postStory[i], 40, 'q'); 
+        await wait(200); 
+    }
+
+    await wait(180);
+    screen.innerHTML = '';
+    screen.scrollTop = 0;
+    await wait(160);
+
+    speechOverlay.style.opacity = '1';
+    await wait(3000);
+    speechOverlay.style.opacity = '0';
+    await wait(600);
+    speechOverlay.style.display = 'none';
+
+    const preSpeech = [
+        '> loading speech...',
+        '> preparing emotional payload...'
+    ];
+    for (let i = 0; i < preSpeech.length; i++) { 
+        await typeWriter(preSpeech[i], 40, 'q'); 
+        await wait(200); 
+    }
+
+    const speechPars = SPEECH.split(/\n\n/);
+    for (let p = 0; p < speechPars.length; p++) {
+        await typeWriterCentered(speechPars[p], 40, 'sys');
+        await wait(240);
+    }
+
+    await typeWriter('> message delivery complete.', 40, 'q');
+    await wait(160);
+    await typeWriter('> transmission closed. all my love.', 40, 'q');
+    await wait(180);
+
+    screen.scrollTop = screen.scrollHeight;
+
+})();
+</script>
+</body>
+</html>
